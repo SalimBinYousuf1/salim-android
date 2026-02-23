@@ -8,7 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.salim.android.data.api.WebSocketManager
 import com.salim.android.data.model.*
 import com.salim.android.data.repository.SalimRepository
-import com.salim.android.di.dataStore
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
@@ -20,7 +21,7 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repo: SalimRepository,
     private val wsManager: WebSocketManager,
-    @ApplicationContext private val context: Context
+    private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
     companion object {
@@ -75,7 +76,7 @@ class MainViewModel @Inject constructor(
 
     private fun loadServerUrl() {
         viewModelScope.launch {
-            context.dataStore.data.collect { prefs ->
+            dataStore.data.collect { prefs ->
                 val url = prefs[SERVER_URL_KEY] ?: DEFAULT_URL
                 _serverUrl.value = url
                 wsManager.connect(url)
@@ -86,7 +87,7 @@ class MainViewModel @Inject constructor(
 
     fun setServerUrl(url: String) {
         viewModelScope.launch {
-            context.dataStore.edit { it[SERVER_URL_KEY] = url }
+            dataStore.edit { it[SERVER_URL_KEY] = url }
             _serverUrl.value = url
             wsManager.connect(url)
             refreshStatus()
