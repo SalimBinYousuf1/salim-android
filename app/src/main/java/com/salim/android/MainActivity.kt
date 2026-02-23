@@ -40,7 +40,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        startForegroundService(Intent(this, SalimForegroundService::class.java))
+        try {
+            startForegroundService(Intent(this, SalimForegroundService::class.java))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         lifecycleScope.launch {
             vm.toast.collect { Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show() }
         }
