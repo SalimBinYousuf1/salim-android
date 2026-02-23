@@ -10,7 +10,6 @@ class SalimApp : Application() {
         super.onCreate()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             Log.e("SalimApp", "Uncaught exception in thread ${thread.name}", throwable)
-            // Let the system handle the crash naturally so it's visible in crash reports
         }
     }
 }

@@ -33,15 +33,12 @@ fun ConnectionScreen(vm: MainViewModel) {
     val pairingCode by vm.pairingCode.collectAsState()
     val isLoading by vm.isLoading.collectAsState()
     val serverUrl by vm.serverUrl.collectAsState()
-    val isServerWaking by vm.isServerWaking.collectAsState()
 
     var phoneInput by remember { mutableStateOf("") }
     var urlInput by remember { mutableStateOf(serverUrl) }
     var showUrlEdit by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(0) }
 
-    // Keep urlInput in sync when serverUrl is loaded from DataStore on first launch
-    LaunchedEffect(serverUrl) { urlInput = serverUrl }
     LaunchedEffect(Unit) { vm.refreshStatus() }
 
     Column(
@@ -54,61 +51,23 @@ fun ConnectionScreen(vm: MainViewModel) {
         Text("Salim AI Agent", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = WhatsAppGreen)
         Spacer(Modifier.height(8.dp))
 
-        // Render cold-start warning banner
-        if (isServerWaking) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
-            ) {
-                Row(
-                    Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        color = Color(0xFFF9A825),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            "Server is waking up…",
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF6D4C00),
-                            fontSize = 13.sp
-                        )
-                        Text(
-                            "Free-tier servers sleep after inactivity. First connect can take ~30–60s.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF9E6C00)
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-        }
-
         // Status dot
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when (status) {
-                            "connected"  -> Color(0xFF25D366)
-                            "connecting" -> Color(0xFFFFC107)
-                            else         -> Color(0xFFE53935)
-                        }
-                    )
+                Modifier.size(12.dp).clip(CircleShape).background(
+                    when (status) {
+                        "connected" -> Color(0xFF25D366)
+                        "connecting" -> Color(0xFFFFC107)
+                        else -> Color(0xFFE53935)
+                    }
+                )
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 when (status) {
-                    "connected"  -> "Connected${phone?.let { " • ${it.substringBefore(":")}" } ?: ""}"
-                    "connecting" -> "Connecting…"
-                    else         -> "Disconnected"
+                    "connected" -> "Connected${phone?.let { " • ${it.substringBefore(":")}" } ?: ""}"
+                    "connecting" -> "Connecting..."
+                    else -> "Disconnected"
                 },
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -166,16 +125,9 @@ fun ConnectionScreen(vm: MainViewModel) {
             when (selectedTab) {
                 0 -> {
                     if (qrCode != null) {
-                        // Robustly handle both "data:image/png;base64,<data>" and raw base64
                         val bmp = remember(qrCode) {
                             try {
-                                val raw = qrCode!!
-                                val b64 = if (raw.contains("base64,")) {
-                                    raw.substringAfter("base64,")
-                                } else {
-                                    raw
-                                }
-                                val bytes = Base64.decode(b64.trim(), Base64.DEFAULT)
+                                val bytes = Base64.decode(qrCode!!.substringAfter("base64,"), Base64.DEFAULT)
                                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
                             } catch (_: Exception) { null }
                         }
@@ -187,22 +139,18 @@ fun ConnectionScreen(vm: MainViewModel) {
                                 Image(
                                     bitmap = bmp,
                                     contentDescription = "QR Code",
-                                    modifier = Modifier
-                                        .size(250.dp)
-                                        .padding(8.dp)
+                                    modifier = Modifier.size(250.dp).padding(8.dp)
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
                             Text("Scan with WhatsApp", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             CircularProgressIndicator(color = WhatsAppGreen)
-                            Spacer(Modifier.height(8.dp))
-                            Text("Decoding QR code…", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
                         CircularProgressIndicator(color = WhatsAppGreen)
                         Spacer(Modifier.height(8.dp))
-                        Text("Waiting for QR code…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Waiting for QR code...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 1 -> {
@@ -249,22 +197,13 @@ fun ConnectionScreen(vm: MainViewModel) {
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
             ) {
-                Column(
-                    Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("✅", fontSize = 48.sp)
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "WhatsApp Connected!",
-                        fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF2E7D32)
-                    )
+                    Text("WhatsApp Connected!", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF2E7D32))
                     phone?.let { Text(it.substringBefore(":"), color = Color(0xFF388E3C)) }
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Salim is active and replying",
-                        style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50)
-                    )
+                    Text("Salim is active and replying", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
                 }
             }
         }
