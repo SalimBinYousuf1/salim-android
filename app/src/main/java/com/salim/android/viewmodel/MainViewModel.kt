@@ -1,17 +1,16 @@
 package com.salim.android.viewmodel
 
-import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.salim.android.data.api.ApiServiceFactory
 import com.salim.android.data.api.WebSocketManager
 import com.salim.android.data.model.*
 import com.salim.android.data.repository.SalimRepository
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,15 +20,15 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repo: SalimRepository,
     private val wsManager: WebSocketManager,
+    private val apiFactory: ApiServiceFactory,
     private val dataStore: DataStore<Preferences>
 ) : ViewModel() {
 
     companion object {
         val SERVER_URL_KEY = stringPreferencesKey("server_url")
-        const val DEFAULT_URL = "https://salim-bot-mn7c.onrender.com"
     }
 
-    private val _serverUrl = MutableStateFlow(DEFAULT_URL)
+    private val _serverUrl = MutableStateFlow(ApiServiceFactory.DEFAULT_URL)
     val serverUrl: StateFlow<String> = _serverUrl
 
     private val _connectionStatus = MutableStateFlow("disconnected")
@@ -68,6 +67,13 @@ class MainViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    /**
+     * True while we are waiting for the Render free-tier server to wake from sleep.
+     * Shown in ConnectionScreen so the user understands why the first connect is slow.
+     */
+    private val _isServerWaking = MutableStateFlow(false)
+    val isServerWaking: StateFlow<Boolean> = _isServerWaking
+
     init {
         loadServerUrl()
         observeWebSocket()
@@ -76,20 +82,55 @@ class MainViewModel @Inject constructor(
 
     private fun loadServerUrl() {
         viewModelScope.launch {
-            dataStore.data.collect { prefs ->
-                val url = prefs[SERVER_URL_KEY] ?: DEFAULT_URL
-                _serverUrl.value = url
-                wsManager.connect(url)
-                refreshStatus()
-            }
+            // first() reads the persisted URL exactly once — avoids the infinite-collect
+            // bug where any DataStore write re-emitted and triggered a double WS connect.
+            val prefs = dataStore.data.first()
+            val url = prefs[SERVER_URL_KEY] ?: ApiServiceFactory.DEFAULT_URL
+            applyUrl(url)
+            warmUpServer()
         }
+    }
+
+    /**
+     * Updates both the HTTP client (ApiServiceFactory) and the WebSocket to use [url].
+     * Single source of truth — called from both [loadServerUrl] and [setServerUrl].
+     */
+    private fun applyUrl(url: String) {
+        _serverUrl.value = url
+        apiFactory.updateUrl(url)   // HTTP calls now use the new URL immediately
+        wsManager.connect(url)      // WebSocket reconnects to the new URL
     }
 
     fun setServerUrl(url: String) {
         viewModelScope.launch {
-            dataStore.edit { it[SERVER_URL_KEY] = url }
-            _serverUrl.value = url
-            wsManager.connect(url)
+            val trimmed = url.trimEnd('/')
+            dataStore.edit { it[SERVER_URL_KEY] = trimmed }
+            applyUrl(trimmed)
+            warmUpServer()
+        }
+    }
+
+    /**
+     * Render free-tier instances spin down after 15 min of inactivity and take
+     * 30–60 s to cold-start.  We detect this by polling health until it succeeds,
+     * showing a "server waking up" indicator to the user rather than a silent wait.
+     */
+    private fun warmUpServer() {
+        viewModelScope.launch {
+            var attempts = 0
+            while (attempts < 20) {   // up to ~60 s of retries
+                val ok = repo.healthCheck().getOrDefault(false)
+                if (ok) {
+                    _isServerWaking.value = false
+                    refreshStatus()
+                    return@launch
+                }
+                if (attempts == 1) _isServerWaking.value = true   // show banner after first miss
+                attempts++
+                delay(3000)
+            }
+            // Give up showing the waking indicator; let normal polling take over
+            _isServerWaking.value = false
             refreshStatus()
         }
     }
@@ -115,7 +156,7 @@ class MainViewModel @Inject constructor(
     private fun startPolling() {
         viewModelScope.launch {
             while (true) {
-                delay(10000)
+                delay(10_000)
                 refreshStatus()
             }
         }
