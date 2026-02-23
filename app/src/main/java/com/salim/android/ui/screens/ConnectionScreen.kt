@@ -36,7 +36,7 @@ fun ConnectionScreen(vm: MainViewModel) {
     var phoneInput by remember { mutableStateOf("") }
     var urlInput by remember { mutableStateOf(serverUrl) }
     var showUrlEdit by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) { vm.refreshStatus() }
 

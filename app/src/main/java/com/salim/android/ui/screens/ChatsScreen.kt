@@ -58,7 +58,7 @@ fun ChatsScreen(vm: MainViewModel) {
                 LazyColumn {
                     items(chats, key = { it.jid }) { chat ->
                         ChatListItem(chat) { selectedChat = chat; vm.loadMessages(chat.jid) }
-                        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                        Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                     }
                 }
             }
@@ -72,8 +72,10 @@ fun ChatsScreen(vm: MainViewModel) {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(36.dp).clip(CircleShape).padding(2.dp), contentAlignment = Alignment.Center) {
-                            Text(chat.name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontWeight = FontWeight.Bold)
+                        Surface(shape = CircleShape, color = WhatsAppGreen, modifier = Modifier.size(36.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(chat.name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
                         }
                         Spacer(Modifier.width(8.dp))
                         Column {
@@ -100,7 +102,12 @@ fun ChatsScreen(vm: MainViewModel) {
                 )
                 Spacer(Modifier.width(8.dp))
                 FloatingActionButton(
-                    onClick = { if (messageText.isNotBlank()) { vm.sendMessage(chat.jid, messageText); messageText = "" } },
+                    onClick = {
+                        if (messageText.isNotBlank()) {
+                            vm.sendMessage(chat.jid, messageText)
+                            messageText = ""
+                        }
+                    },
                     containerColor = WhatsAppGreen, modifier = Modifier.size(48.dp)
                 ) { Icon(Icons.Default.Send, "Send", tint = Color.White) }
             }
@@ -114,20 +121,16 @@ fun ChatListItem(chat: Chat, onClick: () -> Unit) {
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(48.dp).clip(CircleShape).padding(4.dp), contentAlignment = Alignment.Center) {
-            Surface(modifier = Modifier.fillMaxSize(), shape = CircleShape, color = WhatsAppGreen) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(chat.name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                }
+        Surface(shape = CircleShape, color = WhatsAppGreen, modifier = Modifier.size(48.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(chat.name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(chat.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (chat.last_timestamp > 0) {
-                    Text(formatTime(chat.last_timestamp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                if (chat.last_timestamp > 0) Text(formatTime(chat.last_timestamp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(chat.last_message, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
@@ -146,9 +149,16 @@ fun ChatListItem(chat: Chat, onClick: () -> Unit) {
 @Composable
 fun MessageBubble(msg: Message) {
     val isMe = msg.from_me == 1
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
+    ) {
         Surface(
-            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomStart = if (isMe) 12.dp else 4.dp, bottomEnd = if (isMe) 4.dp else 12.dp),
+            shape = RoundedCornerShape(
+                topStart = 12.dp, topEnd = 12.dp,
+                bottomStart = if (isMe) 12.dp else 4.dp,
+                bottomEnd = if (isMe) 4.dp else 12.dp
+            ),
             color = if (isMe) BubbleOut else BubbleIn,
             shadowElevation = 1.dp,
             modifier = Modifier.widthIn(max = 280.dp)
@@ -163,6 +173,6 @@ fun MessageBubble(msg: Message) {
 
 fun formatTime(ts: Long): String {
     if (ts <= 0) return ""
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date(if (ts > 1_000_000_000_000L) ts else ts * 1000))
+    return SimpleDateFormat("HH:mm", Locale.getDefault())
+        .format(Date(if (ts > 1_000_000_000_000L) ts else ts * 1000))
 }
