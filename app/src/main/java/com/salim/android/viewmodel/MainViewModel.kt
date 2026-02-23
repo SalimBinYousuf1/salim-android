@@ -1,5 +1,6 @@
 package com.salim.android.viewmodel
 
+import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
@@ -10,7 +11,6 @@ import com.salim.android.data.repository.SalimRepository
 import com.salim.android.di.dataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import android.content.Context
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -87,6 +87,7 @@ class MainViewModel @Inject constructor(
     fun setServerUrl(url: String) {
         viewModelScope.launch {
             context.dataStore.edit { it[SERVER_URL_KEY] = url }
+            _serverUrl.value = url
             wsManager.connect(url)
             refreshStatus()
         }
@@ -101,10 +102,10 @@ class MainViewModel @Inject constructor(
                         _phone.value = event.data.optString("phone").takeIf { it.isNotBlank() }
                         val qr = event.data.optString("qr").takeIf { it.isNotBlank() }
                         if (qr != null) _qrCode.value = qr
+                        if (_connectionStatus.value == "connected") _qrCode.value = null
                     }
                     "qr" -> _qrCode.value = event.data.optString("qr").takeIf { it.isNotBlank() }
-                    "new_message" -> refreshChats()
-                    "chats_updated" -> refreshChats()
+                    "new_message", "chats_updated" -> refreshChats()
                 }
             }
         }
@@ -146,8 +147,9 @@ class MainViewModel @Inject constructor(
 
     fun sendMessage(jid: String, text: String) {
         viewModelScope.launch {
-            repo.sendMessage(jid, text).onSuccess { refreshChats() }
-                .onFailure { _toast.emit("Failed to send: ${it.message}") }
+            repo.sendMessage(jid, text)
+                .onSuccess { refreshChats() }
+                .onFailure { _toast.emit("Send failed: ${it.message}") }
         }
     }
 
@@ -169,7 +171,8 @@ class MainViewModel @Inject constructor(
 
     fun saveConfig(map: Map<String, String>) {
         viewModelScope.launch {
-            repo.saveConfig(map).onSuccess { _toast.emit("Config saved ✓") }
+            repo.saveConfig(map)
+                .onSuccess { _toast.emit("Config saved ✓") }
                 .onFailure { _toast.emit("Save failed: ${it.message}") }
         }
     }
@@ -196,14 +199,16 @@ class MainViewModel @Inject constructor(
 
     fun deleteKnowledge(id: Int) {
         viewModelScope.launch {
-            repo.deleteKnowledge(id).onSuccess { loadKnowledge(); _toast.emit("Deleted") }
+            repo.deleteKnowledge(id)
+                .onSuccess { loadKnowledge(); _toast.emit("Deleted") }
         }
     }
 
     fun generateStatus(topic: String) {
         viewModelScope.launch {
             _isLoading.value = true
-            repo.generateStatus(topic).onSuccess { _generatedStatus.value = it?.status }
+            repo.generateStatus(topic)
+                .onSuccess { _generatedStatus.value = it?.status }
                 .onFailure { _toast.emit("Failed: ${it.message}") }
             _isLoading.value = false
         }

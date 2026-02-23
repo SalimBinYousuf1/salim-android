@@ -40,20 +40,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Start foreground service
         startForegroundService(Intent(this, SalimForegroundService::class.java))
-
-        // Toast observer
         lifecycleScope.launch {
-            vm.toast.collect { msg -> Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show() }
+            vm.toast.collect { Toast.makeText(this@MainActivity, it, Toast.LENGTH_SHORT).show() }
         }
-
-        setContent {
-            SalimTheme {
-                SalimNavigation(vm)
-            }
-        }
+        setContent { SalimTheme { SalimNavigation(vm) } }
     }
 }
 
@@ -61,29 +52,26 @@ class MainActivity : ComponentActivity() {
 fun SalimNavigation(vm: MainViewModel) {
     val navController = rememberNavController()
     val screens = listOf(Screen.Connection, Screen.Chats, Screen.Status, Screen.History, Screen.Admin)
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                screens.forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, screen.label) },
-                        label = { Text(screen.label) },
-                        selected = currentRoute == screen.route,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+    Scaffold(bottomBar = {
+        NavigationBar {
+            screens.forEach { screen ->
+                NavigationBarItem(
+                    icon = { Icon(screen.icon, screen.label) },
+                    label = { Text(screen.label) },
+                    selected = currentRoute == screen.route,
+                    onClick = {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                    )
-                }
+                    }
+                )
             }
         }
-    ) { padding ->
+    }) { padding ->
         NavHost(navController, startDestination = Screen.Connection.route, Modifier.padding(padding)) {
             composable(Screen.Connection.route) { ConnectionScreen(vm) }
             composable(Screen.Chats.route) { ChatsScreen(vm) }

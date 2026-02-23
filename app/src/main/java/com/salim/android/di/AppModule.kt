@@ -24,28 +24,36 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sa
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
-        .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC })
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        })
         .build()
 
-    @Provides @Singleton
-    fun provideRetrofit(client: OkHttpClient, @ServerUrl baseUrl: String): Retrofit =
-        Retrofit.Builder().baseUrl(baseUrl).client(client).addConverterFactory(GsonConverterFactory.create()).build()
+    @Provides
+    @Singleton
+    @ServerUrl
+    fun provideBaseUrl(): String = "https://salim-bot-mn7c.onrender.com/"
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient, @ServerUrl baseUrl: String): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+    @Provides
+    @Singleton
     fun provideSalimApi(retrofit: Retrofit): SalimApi = retrofit.create(SalimApi::class.java)
 
-    @Provides @Singleton
+    @Provides
+    @Singleton
     fun provideWebSocketManager(client: OkHttpClient): WebSocketManager = WebSocketManager(client)
-
-    @Provides @Singleton
-    @ServerUrl
-    fun provideBaseUrl(@ApplicationContext context: Context): String {
-        // Read from datastore synchronously at startup, default to render URL
-        return "https://salim-bot-mn7c.onrender.com/"
-    }
 }

@@ -20,22 +20,27 @@ class WebSocketManager @Inject constructor(private val client: OkHttpClient) {
 
     fun connect(serverUrl: String) {
         ws?.cancel()
-        val wsUrl = serverUrl.replace("https://", "wss://").replace("http://", "ws://").trimEnd('/') + "/ws"
-        val request = Request.Builder().url(wsUrl).build()
-        ws = client.newWebSocket(request, object : WebSocketListener() {
+        val wsUrl = serverUrl
+            .replace("https://", "wss://")
+            .replace("http://", "ws://")
+            .trimEnd('/') + "/ws"
+        ws = client.newWebSocket(Request.Builder().url(wsUrl).build(), object : WebSocketListener() {
             override fun onMessage(webSocket: WebSocket, text: String) {
                 try {
                     val json = JSONObject(text)
-                    val event = json.optString("event")
-                    val data = json.optJSONObject("data") ?: JSONObject()
-                    _events.tryEmit(WsEvent(event, data))
+                    _events.tryEmit(
+                        WsEvent(
+                            json.optString("event"),
+                            json.optJSONObject("data") ?: JSONObject()
+                        )
+                    )
                 } catch (_: Exception) {}
-            }
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
-                // auto reconnect handled externally
             }
         })
     }
 
-    fun disconnect() { ws?.cancel(); ws = null }
+    fun disconnect() {
+        ws?.cancel()
+        ws = null
+    }
 }

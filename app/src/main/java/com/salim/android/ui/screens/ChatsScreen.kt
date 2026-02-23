@@ -14,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,15 +42,21 @@ fun ChatsScreen(vm: MainViewModel) {
         Column(Modifier.fillMaxSize()) {
             TopAppBar(
                 title = { Text("Chats") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = WhatsAppGreen, titleContentColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = WhatsAppGreen, titleContentColor = Color.White
+                )
             )
             if (chats.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("💬", fontSize = 48.sp)
                         Spacer(Modifier.height(8.dp))
-                        Text("No chats yet", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Connect WhatsApp to see conversations", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("No chats yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Connect WhatsApp to see conversations",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             } else {
@@ -66,21 +71,32 @@ fun ChatsScreen(vm: MainViewModel) {
     } else {
         val chat = selectedChat!!
         val listState = rememberLazyListState()
-        LaunchedEffect(messages.size) { if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1) }
-
+        LaunchedEffect(messages.size) {
+            if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+        }
         Column(Modifier.fillMaxSize()) {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = WhatsAppGreen, modifier = Modifier.size(36.dp)) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.3f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(chat.name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(
+                                    chat.name.firstOrNull()?.uppercase() ?: "?",
+                                    color = Color.White, fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                         Spacer(Modifier.width(8.dp))
                         Column {
                             Text(chat.name, fontSize = 16.sp, color = Color.White)
-                            Text(if (chat.is_group == 1) "Group" else "Private", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
+                            Text(
+                                if (chat.is_group == 1) "Group" else "Private",
+                                fontSize = 12.sp, color = Color.White.copy(0.8f)
+                            )
                         }
                     }
                 },
@@ -91,13 +107,20 @@ fun ChatsScreen(vm: MainViewModel) {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = WhatsAppGreen)
             )
-            LazyColumn(Modifier.weight(1f).padding(horizontal = 8.dp), state = listState) {
-                items(messages, key = { it.id }) { msg -> MessageBubble(msg) }
+            LazyColumn(
+                Modifier.weight(1f).padding(horizontal = 8.dp),
+                state = listState
+            ) {
+                items(messages, key = { it.id }) { MessageBubble(it) }
             }
-            Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 OutlinedTextField(
                     value = messageText, onValueChange = { messageText = it },
-                    modifier = Modifier.weight(1f), placeholder = { Text("Type a message") },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Type a message") },
                     maxLines = 4, shape = RoundedCornerShape(24.dp)
                 )
                 Spacer(Modifier.width(8.dp))
@@ -108,7 +131,8 @@ fun ChatsScreen(vm: MainViewModel) {
                             messageText = ""
                         }
                     },
-                    containerColor = WhatsAppGreen, modifier = Modifier.size(48.dp)
+                    containerColor = WhatsAppGreen,
+                    modifier = Modifier.size(48.dp)
                 ) { Icon(Icons.Default.Send, "Send", tint = Color.White) }
             }
         }
@@ -123,17 +147,39 @@ fun ChatListItem(chat: Chat, onClick: () -> Unit) {
     ) {
         Surface(shape = CircleShape, color = WhatsAppGreen, modifier = Modifier.size(48.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Text(chat.name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    chat.name.firstOrNull()?.uppercase() ?: "?",
+                    color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp
+                )
             }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(chat.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                if (chat.last_timestamp > 0) Text(formatTime(chat.last_timestamp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    chat.name, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+                )
+                if (chat.last_timestamp > 0) {
+                    Text(
+                        fmtTime(chat.last_timestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(chat.last_message, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    chat.last_message,
+                    style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
                 if (chat.unread_count > 0) {
                     Surface(shape = CircleShape, color = WhatsAppGreen, modifier = Modifier.size(20.dp)) {
                         Box(contentAlignment = Alignment.Center) {
@@ -165,13 +211,16 @@ fun MessageBubble(msg: Message) {
         ) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
                 Text(msg.text, color = Color(0xFF111B21))
-                Text(formatTime(msg.timestamp), fontSize = 10.sp, color = Color(0xFF667781), modifier = Modifier.align(Alignment.End))
+                Text(
+                    fmtTime(msg.timestamp), fontSize = 10.sp,
+                    color = Color(0xFF667781), modifier = Modifier.align(Alignment.End)
+                )
             }
         }
     }
 }
 
-fun formatTime(ts: Long): String {
+fun fmtTime(ts: Long): String {
     if (ts <= 0) return ""
     return SimpleDateFormat("HH:mm", Locale.getDefault())
         .format(Date(if (ts > 1_000_000_000_000L) ts else ts * 1000))

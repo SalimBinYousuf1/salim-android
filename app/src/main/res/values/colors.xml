@@ -1,3 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="whatsapp_green">#128C7E</color>
+    <color name="whatsapp_green_dark">#075E54</color>
+    <color name="whatsapp_green_light">#25D366</color>
 </resources>

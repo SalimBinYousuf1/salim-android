@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.salim.android.data.model.Config
+import com.salim.android.data.model.KnowledgeItem
 import com.salim.android.ui.theme.WhatsAppGreen
 import com.salim.android.viewmodel.MainViewModel
 
@@ -24,19 +25,18 @@ import com.salim.android.viewmodel.MainViewModel
 fun AdminScreen(vm: MainViewModel) {
     val config by vm.config.collectAsState()
     val knowledge by vm.knowledge.collectAsState()
-
     LaunchedEffect(Unit) { vm.loadConfig(); vm.loadKnowledge() }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("Admin Panel", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = WhatsAppGreen)
         Spacer(Modifier.height(16.dp))
-        if (config != null) ConfigPanel(config!!, vm)
+        config?.let { ConfigPanel(it, vm) }
         Spacer(Modifier.height(16.dp))
         KnowledgePanel(knowledge, vm)
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ConfigPanel(config: Config, vm: MainViewModel) {
     var agentName by remember(config) { mutableStateOf(config.agent_name) }
@@ -47,9 +47,6 @@ fun ConfigPanel(config: Config, vm: MainViewModel) {
     var maxTokens by remember(config) { mutableStateOf(config.max_tokens.toFloatOrNull() ?: 1024f) }
     var selectedTone by remember(config) { mutableStateOf(config.personality_tone) }
     var selectedHumor by remember(config) { mutableStateOf(config.humor_level) }
-
-    val tones = listOf("friendly", "professional", "casual", "formal", "witty")
-    val humors = listOf("none", "low", "medium", "high")
 
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.padding(16.dp)) {
@@ -65,7 +62,7 @@ fun ConfigPanel(config: Config, vm: MainViewModel) {
             Text("Personality Tone", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                tones.forEach { tone ->
+                listOf("friendly", "professional", "casual", "formal", "witty").forEach { tone ->
                     FilterChip(
                         selected = selectedTone == tone,
                         onClick = { selectedTone = tone },
@@ -78,7 +75,7 @@ fun ConfigPanel(config: Config, vm: MainViewModel) {
             Text("Humor Level", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                humors.forEach { h ->
+                listOf("none", "low", "medium", "high").forEach { h ->
                     FilterChip(
                         selected = selectedHumor == h,
                         onClick = { selectedHumor = h },
@@ -95,39 +92,26 @@ fun ConfigPanel(config: Config, vm: MainViewModel) {
             )
             Spacer(Modifier.height(12.dp))
 
-            Row(
-                Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Auto Reply")
-                Switch(
-                    checked = autoReply, onCheckedChange = { autoReply = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = WhatsAppGreen)
-                )
+                Switch(checked = autoReply, onCheckedChange = { autoReply = it },
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = WhatsAppGreen))
             }
-            Row(
-                Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Group Reactions")
-                Switch(
-                    checked = groupReactions, onCheckedChange = { groupReactions = it },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = WhatsAppGreen)
-                )
+                Switch(checked = groupReactions, onCheckedChange = { groupReactions = it },
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = WhatsAppGreen))
             }
             Spacer(Modifier.height(12.dp))
 
             Text("Temperature: ${"%.1f".format(temperature)}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Slider(
-                value = temperature, onValueChange = { temperature = it },
-                valueRange = 0f..1f, steps = 9,
+                value = temperature, onValueChange = { temperature = it }, valueRange = 0f..1f, steps = 9,
                 colors = SliderDefaults.colors(thumbColor = WhatsAppGreen, activeTrackColor = WhatsAppGreen)
             )
-            Spacer(Modifier.height(4.dp))
             Text("Max Tokens: ${maxTokens.toInt()}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Slider(
-                value = maxTokens, onValueChange = { maxTokens = it },
-                valueRange = 256f..4096f, steps = 14,
+                value = maxTokens, onValueChange = { maxTokens = it }, valueRange = 256f..4096f, steps = 14,
                 colors = SliderDefaults.colors(thumbColor = WhatsAppGreen, activeTrackColor = WhatsAppGreen)
             )
             Spacer(Modifier.height(16.dp))
@@ -153,10 +137,7 @@ fun ConfigPanel(config: Config, vm: MainViewModel) {
 }
 
 @Composable
-fun KnowledgePanel(
-    knowledge: List<com.salim.android.data.model.KnowledgeItem>,
-    vm: MainViewModel
-) {
+fun KnowledgePanel(knowledge: List<KnowledgeItem>, vm: MainViewModel) {
     var showDialog by remember { mutableStateOf(false) }
     var newTitle by remember { mutableStateOf("") }
     var newContent by remember { mutableStateOf("") }
@@ -164,11 +145,7 @@ fun KnowledgePanel(
 
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Knowledge Base", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 IconButton(onClick = { showDialog = true }) {
                     Icon(Icons.Default.Add, "Add", tint = WhatsAppGreen)
@@ -182,10 +159,7 @@ fun KnowledgePanel(
                 )
             } else {
                 knowledge.forEach { item ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(item.title, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
                             Text(item.content, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
@@ -224,7 +198,9 @@ fun KnowledgePanel(
                     colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen)
                 ) { Text("Add") }
             },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+            }
         )
     }
 }
