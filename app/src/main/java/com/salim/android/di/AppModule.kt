@@ -18,11 +18,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
+// Must be top-level so the delegate is a true singleton backed by a single DataStore instance
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "salim_prefs")
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "salim_prefs")
 
     @Provides
     @Singleton

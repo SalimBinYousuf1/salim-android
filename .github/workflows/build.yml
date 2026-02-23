@@ -19,6 +19,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -26,9 +27,14 @@ jobs:
       - name: Download Gradle Wrapper JAR
         run: |
           mkdir -p gradle/wrapper
+          curl -sL "https://services.gradle.org/distributions/gradle-8.4-bin.zip" -o /tmp/gradle.zip
+          unzip -j /tmp/gradle.zip "gradle-8.4/lib/plugins/gradle-wrapper-*.jar" -d /tmp/gradle-extracted/ 2>/dev/null || true
+          # Fallback: download wrapper jar directly from Maven Central
+          curl -sL "https://repo1.maven.org/maven2/org/gradle/gradle-wrapper/8.4/gradle-wrapper-8.4.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
           curl -sL "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
-          echo "Downloaded: $(ls -lh gradle/wrapper/gradle-wrapper.jar)"
+          echo "Wrapper JAR size: $(ls -lh gradle/wrapper/gradle-wrapper.jar)"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
